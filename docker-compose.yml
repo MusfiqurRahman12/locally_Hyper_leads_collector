@@ -1,0 +1,97 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: lpf_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-lpf}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-lpfpassword}
+      POSTGRES_DB: ${POSTGRES_DB:-local_prospect_finder}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-lpf}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: lpf_redis
+    restart: unless-stopped
+    command: redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build:
+      context: ./apps/api
+      dockerfile: Dockerfile
+    container_name: lpf_api
+    restart: unless-stopped
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER:-lpf}:${POSTGRES_PASSWORD:-lpfpassword}@postgres:5432/${POSTGRES_DB:-local_prospect_finder}
+      - REDIS_URL=redis://redis:6379/0
+      - GOOGLE_PLACES_API_KEY=${GOOGLE_PLACES_API_KEY:-}
+      - WAPPALYZER_API_KEY=${WAPPALYZER_API_KEY:-}
+      - PAGESPEED_API_KEY=${PAGESPEED_API_KEY:-}
+      - SECRET_KEY=${SECRET_KEY:-changeme-in-production}
+      - ENVIRONMENT=${ENVIRONMENT:-production}
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./apps/api:/app
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000
+
+  worker:
+    build:
+      context: ./apps/api
+      dockerfile: Dockerfile
+    container_name: lpf_worker
+    restart: unless-stopped
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER:-lpf}:${POSTGRES_PASSWORD:-lpfpassword}@postgres:5432/${POSTGRES_DB:-local_prospect_finder}
+      - REDIS_URL=redis://redis:6379/0
+      - GOOGLE_PLACES_API_KEY=${GOOGLE_PLACES_API_KEY:-}
+      - WAPPALYZER_API_KEY=${WAPPALYZER_API_KEY:-}
+      - PAGESPEED_API_KEY=${PAGESPEED_API_KEY:-}
+      - SECRET_KEY=${SECRET_KEY:-changeme-in-production}
+      - ENVIRONMENT=${ENVIRONMENT:-production}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./apps/api:/app
+    command: celery -A app.workers.celery_app worker --loglevel=info --concurrency=4
+
+  web:
+    build:
+      context: ./apps/web
+      dockerfile: Dockerfile
+    container_name: lpf_web
+    restart: unless-stopped
+    environment:
+      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://localhost:8000}
+    ports:
+      - "3000:3000"
+    depends_on:
+      - api
+
+volumes:
+  postgres_data:
