@@ -1,0 +1,113 @@
+@import "tailwindcss";
+
+:root {
+  --font-inter: 'Inter', sans-serif;
+  --accent: #6366f1;
+  --accent-glow: rgba(99, 102, 241, 0.3);
+  --success: #10b981;
+  --warning: #f59e0b;
+  --danger: #ef4444;
+  --surface: #111827;
+  --surface-2: #1f2937;
+  --surface-3: #374151;
+  --border: rgba(255, 255, 255, 0.08);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  font-family: var(--font-inter), system-ui, sans-serif;
+  background: #030712;
+}
+
+/* ── Scrollbar ─────────────────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #374151; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #4b5563; }
+
+/* ── Glass card ────────────────────────────────────────────────────────── */
+.glass {
+  background: rgba(255, 255, 255, 0.04);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* ── Score ring colors ─────────────────────────────────────────────────── */
+.score-high   { color: #ef4444; }
+.score-medium { color: #f59e0b; }
+.score-low    { color: #10b981; }
+
+/* ── Priority badge ────────────────────────────────────────────────────── */
+.badge-high   { background: rgba(239,68,68,0.15); color: #f87171; border: 1px solid rgba(239,68,68,0.3); }
+.badge-medium { background: rgba(245,158,11,0.15); color: #fbbf24; border: 1px solid rgba(245,158,11,0.3); }
+.badge-low    { background: rgba(16,185,129,0.15); color: #34d399; border: 1px solid rgba(16,185,129,0.3); }
+
+/* ── Map container ─────────────────────────────────────────────────────── */
+.leaflet-container {
+  background: #111827 !important;
+  font-family: var(--font-inter) !important;
+  border-radius: 12px;
+}
+.leaflet-tile-pane { filter: brightness(0.6) saturate(0.5); }
+.leaflet-popup-content-wrapper {
+  background: #1f2937 !important;
+  color: #f3f4f6 !important;
+  border: 1px solid rgba(255,255,255,0.1) !important;
+  border-radius: 12px !important;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.5) !important;
+}
+.leaflet-popup-tip { background: #1f2937 !important; }
+.leaflet-control-zoom a {
+  background: #1f2937 !important;
+  color: #f3f4f6 !important;
+  border-color: rgba(255,255,255,0.1) !important;
+}
+
+/* ── Animated gradient background ─────────────────────────────────────── */
+.hero-gradient {
+  background: radial-gradient(ellipse at 20% 50%, rgba(99,102,241,0.15) 0%, transparent 60%),
+              radial-gradient(ellipse at 80% 20%, rgba(139,92,246,0.1) 0%, transparent 50%),
+              radial-gradient(ellipse at 60% 80%, rgba(59,130,246,0.08) 0%, transparent 50%);
+}
+
+/* ── Scan progress bar ─────────────────────────────────────────────────── */
+.progress-bar {
+  background: linear-gradient(90deg, #6366f1, #8b5cf6);
+  transition: width 0.5s ease;
+  box-shadow: 0 0 10px rgba(99,102,241,0.5);
+}
+
+/* ── Table row hover ───────────────────────────────────────────────────── */
+.prospect-row:hover {
+  background: rgba(99,102,241,0.06);
+  cursor: pointer;
+}
+
+/* ── Animate in ────────────────────────────────────────────────────────── */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.fade-up { animation: fadeUp 0.4s ease forwards; }
+
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 0 0 var(--accent-glow); }
+  50%       { box-shadow: 0 0 0 8px transparent; }
+}
+.pulse-glow { animation: pulse-glow 2s infinite; }
+
+/* ── Audit score circle ────────────────────────────────────────────────── */
+.score-circle {
+  width: 64px; height: 64px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 700; font-size: 1.1rem;
+  border: 3px solid;
+}
+.score-circle.good   { border-color: #10b981; color: #10b981; background: rgba(16,185,129,0.1); }
+.score-circle.avg    { border-color: #f59e0b; color: #f59e0b; background: rgba(245,158,11,0.1); }
+.score-circle.poor   { border-color: #ef4444; color: #ef4444; background: rgba(239,68,68,0.1); }
+.score-circle.unknown{ border-color: #6b7280; color: #6b7280; background: rgba(107,114,128,0.1); }
