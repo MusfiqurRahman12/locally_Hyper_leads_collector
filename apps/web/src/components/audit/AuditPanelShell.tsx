@@ -6,22 +6,36 @@ interface AuditPanelShellProps {
   score?: number;
   data?: AuditResult;
   scanDone?: boolean;
+  onRunScan?: () => void;
+  isScanning?: boolean;
   children?: React.ReactNode;
 }
 
-export function AuditPanelShell({ title, score, data, scanDone, children }: AuditPanelShellProps) {
+export function AuditPanelShell({ title, score, data, scanDone, onRunScan, isScanning, children }: AuditPanelShellProps) {
   if (!scanDone) {
     return (
-      <div className="glass rounded-xl p-8 text-center">
-        <Info size={24} className="mx-auto mb-3 text-gray-600" />
-        <p className="text-gray-500 text-sm">Run a scan to see {title} results.</p>
+      <div className="glass rounded-xl p-8 text-center max-w-lg mx-auto my-6 border border-indigo-500/20 bg-indigo-500/5">
+        <Info size={28} className="mx-auto mb-3 text-indigo-400" />
+        <h4 className="text-base font-semibold text-white mb-1">{title} Audit Not Run Yet</h4>
+        <p className="text-gray-400 text-xs mb-4 leading-relaxed">
+          Run an AI scan to analyze {title.toLowerCase()} metrics, detect vulnerabilities, and extract phone, email & decision maker details.
+        </p>
+        {onRunScan && (
+          <button
+            onClick={onRunScan}
+            disabled={isScanning}
+            className="px-5 py-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold transition-colors disabled:opacity-50 inline-flex items-center gap-2 shadow-lg shadow-indigo-500/20"
+          >
+            {isScanning ? 'Scanning in progress…' : `Run Scan for ${title}`}
+          </button>
+        )}
       </div>
     );
   }
   if (!data) {
     return (
       <div className="glass rounded-xl p-8 text-center">
-        <p className="text-gray-500 text-sm">No {title} data available.</p>
+        <p className="text-gray-500 text-sm">No {title} data available for this business.</p>
       </div>
     );
   }

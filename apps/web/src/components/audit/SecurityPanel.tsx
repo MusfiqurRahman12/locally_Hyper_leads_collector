@@ -2,7 +2,7 @@ import type { AuditResult } from '@/types/prospect';
 import { AuditPanelShell, FindingsList, DataGrid } from './AuditPanelShell';
 import { ShieldCheck, ShieldX } from 'lucide-react';
 
-export function SecurityPanel({ data, scanDone }: { data?: AuditResult; scanDone?: boolean }) {
+export function SecurityPanel({ data, scanDone, onRunScan, isScanning }: { data?: AuditResult; scanDone?: boolean; onRunScan?: () => void; isScanning?: boolean }) {
   const d = data?.data as Record<string, unknown> | undefined;
   const ssl = d?.ssl as Record<string, unknown> | undefined;
   const headersMissing = d?.headers_missing as string[] | undefined;
@@ -10,7 +10,7 @@ export function SecurityPanel({ data, scanDone }: { data?: AuditResult; scanDone
   const exposedPaths = d?.exposed_paths as Array<{ path: string; label: string }> | undefined;
 
   return (
-    <AuditPanelShell title="Security" score={data?.score} data={data} scanDone={scanDone}>
+    <AuditPanelShell title="Security" score={data?.score} data={data} scanDone={scanDone} onRunScan={onRunScan} isScanning={isScanning}>
       {d && (
         <div className="space-y-4">
           <DataGrid items={[

@@ -1,12 +1,24 @@
 import type { PainPoint } from '@/types/prospect';
 import { XCircle, AlertTriangle, Info, Target } from 'lucide-react';
 
-export function PainPointsPanel({ painPoints, scanDone }: { painPoints: PainPoint[]; scanDone?: boolean }) {
+export function PainPointsPanel({ painPoints, scanDone, onRunScan, isScanning }: { painPoints: PainPoint[]; scanDone?: boolean; onRunScan?: () => void; isScanning?: boolean }) {
   if (!scanDone) {
     return (
-      <div className="glass rounded-xl p-8 text-center">
-        <Target size={24} className="mx-auto mb-3 text-gray-600" />
-        <p className="text-gray-500 text-sm">Run a scan to generate pain points.</p>
+      <div className="glass rounded-xl p-8 text-center max-w-lg mx-auto my-6 border border-indigo-500/20 bg-indigo-500/5">
+        <Target size={28} className="mx-auto mb-3 text-indigo-400" />
+        <h4 className="text-base font-semibold text-white mb-1">Pain Points Analysis Not Run Yet</h4>
+        <p className="text-gray-400 text-xs mb-4 leading-relaxed">
+          Run an AI scan to automatically analyze digital weaknesses, SEO flaws, and missing contact information for sales outreach.
+        </p>
+        {onRunScan && (
+          <button
+            onClick={onRunScan}
+            disabled={isScanning}
+            className="px-5 py-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold transition-colors disabled:opacity-50 inline-flex items-center gap-2 shadow-lg shadow-indigo-500/20"
+          >
+            {isScanning ? 'Scanning in progress…' : 'Run Scan for Pain Points'}
+          </button>
+        )}
       </div>
     );
   }

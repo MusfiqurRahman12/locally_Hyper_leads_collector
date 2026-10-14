@@ -1,7 +1,8 @@
 'use client';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Search, MapPin, Zap, BarChart3, Shield, Globe, ArrowRight, Layers } from 'lucide-react';
+import { Search, MapPin, Zap, BarChart3, Shield, Globe, ArrowRight, Layers, Rocket } from 'lucide-react';
+import Link from 'next/link';
 import { SearchPanel } from '@/components/search/SearchPanel';
 import type { SearchResponse } from '@/types/prospect';
 
@@ -11,7 +12,9 @@ export default function HomePage() {
 
   const handleSearchComplete = (result: SearchResponse) => {
     setSearchResult(result);
-    setTimeout(() => router.push('/dashboard'), 1200);
+    const loc = result.city || result.state || (result.location_name ? result.location_name.split(',').filter(p => isNaN(Number(p.trim())))[0]?.trim() : '');
+    const searchParam = loc ? encodeURIComponent(loc) : '';
+    setTimeout(() => router.push(searchParam ? `/dashboard?search=${searchParam}` : '/dashboard'), 1200);
   };
 
   return (
@@ -24,12 +27,20 @@ export default function HomePage() {
           </div>
           <span className="font-semibold text-white">Local Prospect Finder</span>
         </div>
-        <button
-          onClick={() => router.push('/dashboard')}
-          className="text-sm text-gray-400 hover:text-white transition-colors flex items-center gap-1"
-        >
-          Dashboard <ArrowRight size={14} />
-        </button>
+        <div className="flex items-center gap-3">
+          <Link
+            href="/bulk-scraper"
+            className="text-sm text-violet-400 hover:text-violet-300 transition-colors flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-violet-500/10 border border-violet-500/20 hover:bg-violet-500/20"
+          >
+            <Rocket size={13} /> Bulk Scraper
+          </Link>
+          <button
+            onClick={() => router.push('/dashboard')}
+            className="text-sm text-gray-400 hover:text-white transition-colors flex items-center gap-1"
+          >
+            Dashboard <ArrowRight size={14} />
+          </button>
+        </div>
       </nav>
 
       {/* ── Hero ── */}
@@ -65,6 +76,18 @@ export default function HomePage() {
             <p className="text-gray-400 text-sm mt-1">Redirecting to dashboard…</p>
           </div>
         )}
+
+        {/* ── Bulk Scraper CTA ── */}
+        <div className="mt-8 fade-up" style={{ animationDelay: '0.15s' }}>
+          <Link
+            href="/bulk-scraper"
+            className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-violet-600/20 border border-violet-500/30 text-violet-300 hover:bg-violet-600/30 hover:text-violet-200 transition-all text-sm font-medium group"
+          >
+            <Rocket size={15} className="group-hover:animate-bounce" />
+            Have many keywords? Use the Bulk Keyword Scraper
+            <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
+          </Link>
+        </div>
 
         {/* ── Feature grid ── */}
         <div className="mt-20 grid grid-cols-2 md:grid-cols-3 gap-4 max-w-3xl w-full fade-up" style={{ animationDelay: '0.2s' }}>

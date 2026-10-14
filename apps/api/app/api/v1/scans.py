@@ -20,6 +20,8 @@ class BulkScanRequest(BaseModel):
     prospect_ids: List[UUID]
 
 
+from datetime import datetime, timedelta
+
 @router.post("/scans", response_model=ScanRead)
 async def trigger_scan(
     request: ScanCreate,
@@ -30,15 +32,30 @@ async def trigger_scan(
     if not prospect:
         raise HTTPException(status_code=404, detail="Prospect not found")
 
-    # Check for already running scan
+    # Check for active running scan (ignore stuck scans older than 3 minutes)
+    three_mins_ago = datetime.utcnow() - timedelta(minutes=3)
     existing_result = await session.exec(
         select(Scan).where(
             Scan.prospect_id == request.prospect_id,
-            Scan.status.in_([ScanStatus.PENDING, ScanStatus.RUNNING])
+            Scan.status.in_([ScanStatus.PENDING, ScanStatus.RUNNING]),
+            Scan.triggered_at > three_mins_ago,
         )
     )
-    if existing_result.first():
+    stuck_scan = existing_result.first()
+    if stuck_scan:
         raise HTTPException(status_code=409, detail="A scan is already running for this prospect.")
+
+    # Mark any older stuck scans as failed
+    old_stuck = await session.exec(
+        select(Scan).where(
+            Scan.prospect_id == request.prospect_id,
+            Scan.status.in_([ScanStatus.PENDING, ScanStatus.RUNNING]),
+        )
+    )
+    for old in old_stuck.all():
+        old.status = ScanStatus.FAILED
+        old.error_message = "Timed out"
+        session.add(old)
 
     scan = Scan(prospect_id=request.prospect_id)
     session.add(scan)

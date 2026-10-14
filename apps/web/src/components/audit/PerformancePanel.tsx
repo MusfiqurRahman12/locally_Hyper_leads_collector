@@ -18,14 +18,14 @@ function CWVMetric({ label, value, unit, thresholds }: { label: string; value?: 
   );
 }
 
-export function PerformancePanel({ data, scanDone }: { data?: AuditResult; scanDone?: boolean }) {
+export function PerformancePanel({ data, scanDone, onRunScan, isScanning }: { data?: AuditResult; scanDone?: boolean; onRunScan?: () => void; isScanning?: boolean }) {
   const d = data?.data as Record<string, Record<string, unknown>> | undefined;
   const mobile = d?.mobile as Record<string, unknown> | undefined;
   const scores = mobile?.scores as Record<string, number> | undefined;
   const cwv = mobile?.core_web_vitals as Record<string, { value?: number; display?: string }> | undefined;
 
   return (
-    <AuditPanelShell title="Performance" score={scores?.performance} data={data} scanDone={scanDone}>
+    <AuditPanelShell title="Performance" score={scores?.performance} data={data} scanDone={scanDone} onRunScan={onRunScan} isScanning={isScanning}>
       {cwv && (
         <div className="space-y-4">
           <div>

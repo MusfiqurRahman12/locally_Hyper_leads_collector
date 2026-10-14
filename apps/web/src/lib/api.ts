@@ -12,7 +12,7 @@ import type {
   PriorityFilter,
 } from '@/types/prospect';
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8005';
 
 export const api = axios.create({
   baseURL: `${API_BASE}/api/v1`,

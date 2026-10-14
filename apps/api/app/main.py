@@ -26,7 +26,7 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# CORS – allow Next.js frontend
+# CORS – allow Next.js frontend and Chrome extensions
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
@@ -34,6 +34,7 @@ app.add_middleware(
         "http://127.0.0.1:3000",
         "http://localhost:3001",
     ],
+    allow_origin_regex=r".*",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

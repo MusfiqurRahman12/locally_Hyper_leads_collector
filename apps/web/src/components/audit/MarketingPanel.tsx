@@ -1,12 +1,12 @@
 import type { AuditResult } from '@/types/prospect';
 import { AuditPanelShell, FindingsList, DataGrid } from './AuditPanelShell';
 
-export function MarketingPanel({ data, scanDone }: { data?: AuditResult; scanDone?: boolean }) {
+export function MarketingPanel({ data, scanDone, onRunScan, isScanning }: { data?: AuditResult; scanDone?: boolean; onRunScan?: () => void; isScanning?: boolean }) {
   const d = data?.data as Record<string, unknown> | undefined;
   const tools = d?.detected_tools as Array<{ key: string; name: string }> | undefined;
 
   return (
-    <AuditPanelShell title="Marketing" score={data?.score} data={data} scanDone={scanDone}>
+    <AuditPanelShell title="Marketing" score={data?.score} data={data} scanDone={scanDone} onRunScan={onRunScan} isScanning={isScanning}>
       {d && (
         <div className="space-y-4">
           <DataGrid items={[

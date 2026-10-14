@@ -1,0 +1,45 @@
+{
+  "manifest_version": 3,
+  "name": "J-Tech Maps Trade Lead Scraper & Demo Engine",
+  "version": "1.0.0",
+  "description": "Scrape Google Maps local business results, apply B2B qualification filters for home-service contractors, classify digital gaps, and generate personalized demo URLs.",
+  "permissions": [
+    "activeTab",
+    "scripting",
+    "downloads",
+    "storage"
+  ],
+  "host_permissions": [
+    "*://www.google.com/maps/*",
+    "*://maps.google.com/*",
+    "*://*.google.com/maps/*",
+    "http://localhost:8000/*",
+    "http://localhost:8005/*",
+    "http://127.0.0.1:8000/*",
+    "http://127.0.0.1:8005/*"
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "*://www.google.com/maps/*",
+        "*://maps.google.com/*",
+        "*://*.google.com/maps/*"
+      ],
+      "js": ["rules.js", "content.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  }
+}

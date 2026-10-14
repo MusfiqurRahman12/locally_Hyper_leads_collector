@@ -1,37 +1,40 @@
-# 🔍 Local Prospect Finder
+# 🚀 Locally Hyper Leads Collector & Sales Intelligence Platform
 
-AI-powered local business prospect discovery and sales intelligence platform.
+AI-powered local business prospect discovery, Google Maps lead scraper, deep website auditor, and sales intelligence platform.
 
 ## Features
 
-- **Free Business Discovery** — OpenStreetMap Overpass API (no API key needed)
-- **7-Dimension Audit** — SEO · Performance · Security · Technology · Marketing · Social · UX
+- **Google Maps Scraper Extension** — High-speed Chrome extension to scrape and qualify local B2B contractors with direct backend synchronization
+- **Free Business Discovery** — OpenStreetMap Overpass API & SearXNG integration (zero paid API keys required)
+- **7-Dimension Digital Audit** — SEO · Performance · Security · Technology Stack · Marketing & Pixels · Social · UX
+- **Bulk Scraper & Enrichment** — Contact enrichment (emails, phone numbers, social handles)
 - **Lead Scoring** — Weighted 0–100 opportunity score per prospect
-- **Pain Points** — Evidence-based findings for sales conversations
-- **Service Recommendations** — Auto-generated from audit findings
-- **Export** — CSV · Excel · JSON
-- **Live Map** — Leaflet.js with OpenStreetMap (free)
-- **Background Scans** — Celery + Redis async pipeline
+- **Pain Points Discovery** — Evidence-based findings and audit insights for high-converting sales conversations
+- **Service Recommendations** — Auto-generated upsell recommendations from audit findings
+- **Export** — CSV · Excel · JSON format exports for your CRM
+- **Live Interactive Map** — Leaflet.js with OpenStreetMap
+- **Background Scans** — Celery + Redis asynchronous multi-worker pipeline
 
 ## Tech Stack
 
 | Layer | Technology |
 |---|---|
+| Extension | Chrome MV3 (JavaScript, Content Scripts, Popup UI) |
 | Frontend | Next.js 15 + TypeScript + Tailwind CSS |
 | Backend | FastAPI (Python 3.12) |
 | Task Queue | Celery + Redis |
 | Database | PostgreSQL 16 + SQLModel |
 | Map | Leaflet.js + OpenStreetMap |
-| Discovery | OpenStreetMap Overpass API |
-| Performance | Google PageSpeed Insights API (free) |
+| Discovery | OpenStreetMap Overpass API + SearXNG |
+| Performance | Google PageSpeed Insights API |
 | Tech Detection | HTML pattern matching (+ Wappalyzer if key provided) |
 
 ## Quick Start (Docker Compose)
 
 ```bash
 # 1. Clone the repo
-git clone https://github.com/MusfiqurRahman12/Local-Prospects-Finder.git
-cd Local-Prospects-Finder
+git clone https://github.com/MusfiqurRahman12/locally_Hyper_leads_collector.git
+cd locally_Hyper_leads_collector
 
 # 2. Copy env file
 cp .env.example .env
@@ -101,19 +104,21 @@ apps/
   api/                   # FastAPI backend
     app/
       services/
-        discovery/       # OpenStreetMap integration
-        audit/           # 6 audit services
+        discovery/       # OpenStreetMap & SearXNG integration
+        audit/           # Audit services (SEO, tech, contact enrichment)
         scoring/         # Lead scorer + pain point generator
-      workers/           # Celery tasks
-      api/v1/            # REST endpoints
+      workers/           # Celery async scan tasks
+      api/v1/            # REST endpoints (batch ingestion, search, prospects)
       models/            # SQLModel tables
   web/                   # Next.js 15 frontend
     src/
-      app/               # Pages (/, /dashboard, /prospect/[id])
-      components/        # All UI components
+      app/               # Pages (/, /dashboard, /bulk-scraper, /prospect/[id])
+      components/        # UI & audit score panels
       lib/               # API client
       types/             # TypeScript types
+extension/               # Chrome MV3 Google Maps Lead Scraper & Exporter
 docker-compose.yml
+searxng-settings.yml
 .env.example
 ```
 

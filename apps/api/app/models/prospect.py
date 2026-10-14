@@ -95,6 +95,7 @@ class ProspectList(SQLModel):
     city: Optional[str]
     state: Optional[str]
     phone: Optional[str]
+    email: Optional[str]
     website: Optional[str]
     google_rating: Optional[float]
     review_count: Optional[int]
@@ -103,4 +104,6 @@ class ProspectList(SQLModel):
     business_status: Optional[str]
     lat: Optional[float]
     lng: Optional[float]
+    owner_name: Optional[str] = None
+    contact_details: Optional[dict] = None
     last_scan_date: Optional[datetime]

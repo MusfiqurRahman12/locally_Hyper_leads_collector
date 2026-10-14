@@ -23,6 +23,8 @@ export interface Prospect {
   social_links?: Record<string, string>;
   lead_score?: number;
   priority?: 'HIGH' | 'MEDIUM' | 'LOW';
+  owner_name?: string;
+  contact_details?: Record<string, any>;
   data_source?: string;
   last_scan_date?: string;
   created_at?: string;
@@ -106,6 +108,8 @@ export interface SearchResponse {
   radius_km: number;
   category: string;
   location_name?: string;
+  city?: string;
+  state?: string;
 }
 
 export interface Category {

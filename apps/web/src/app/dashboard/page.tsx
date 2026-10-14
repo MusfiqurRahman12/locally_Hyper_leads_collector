@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import {
   Search, Filter, Download, RefreshCw, Zap, Globe, MapPin,
   ChevronUp, ChevronDown, Trash2, ScanLine, LayoutGrid, List,
-  ArrowLeft
+  ArrowLeft, Rocket
 } from 'lucide-react';
 import { listProspects, triggerBulkScan, getExportUrl } from '@/lib/api';
 import { ScoreBadge } from '@/components/prospects/ScoreBadge';
@@ -17,6 +17,15 @@ import Link from 'next/link';
 export default function DashboardPage() {
   const router = useRouter();
   const [search, setSearch] = useState('');
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const q = params.get('search');
+      if (q) setSearch(q);
+    }
+  }, []);
+
   const [category, setCategory] = useState('');
   const [priority, setPriority] = useState<PriorityFilter>('');
   const [hasWebsite, setHasWebsite] = useState<boolean | undefined>(undefined);
@@ -131,6 +140,9 @@ export default function DashboardPage() {
           <button onClick={() => refetch()} className="p-1.5 rounded-lg border border-white/10 hover:border-white/20 text-gray-400 transition-colors">
             <RefreshCw size={14} />
           </button>
+          <Link href="/bulk-scraper" className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-violet-600/20 border border-violet-500/30 text-violet-400 text-xs hover:bg-violet-600/30 transition-colors">
+            <Rocket size={12} /> Bulk Scraper
+          </Link>
           <Link href="/" className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600/20 border border-indigo-500/30 text-indigo-400 text-xs hover:bg-indigo-600/30 transition-colors">
             <Search size={12} /> New Search
           </Link>
@@ -156,7 +168,7 @@ export default function DashboardPage() {
               <input
                 value={search}
                 onChange={e => { setSearch(e.target.value); setPage(1); }}
-                placeholder="Business name…"
+                placeholder="Business name, city, state…"
                 className="w-full bg-white/5 border border-white/10 rounded-lg pl-7 pr-3 py-1.5 text-xs text-gray-200 placeholder-gray-600 focus:outline-none focus:border-indigo-500/50"
               />
             </div>

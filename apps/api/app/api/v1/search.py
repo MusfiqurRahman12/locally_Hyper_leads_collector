@@ -41,6 +41,8 @@ class SearchResponse(BaseModel):
     radius_km: float
     category: str
     location_name: Optional[str]
+    city: Optional[str] = None
+    state: Optional[str] = None
 
 
 class GeocodeRequest(BaseModel):
@@ -152,6 +154,8 @@ async def search_prospects(
         radius_km=request.radius_km,
         category=request.category,
         location_name=location_name,
+        city=geo_info.get("city"),
+        state=geo_info.get("state"),
     )
 
 

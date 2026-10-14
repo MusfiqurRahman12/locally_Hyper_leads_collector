@@ -164,9 +164,88 @@ class WebsiteScraper:
         ]
         return filtered[:10]
 
-    def _extract_phones(self, html: str) -> List[str]:
-        phones = PHONE_PATTERN.findall(html)
-        return list(set(["".join(p) for p in phones]))[:5]
+    def _extract_phones(self, html: str, soup: Optional[BeautifulSoup] = None) -> List[str]:
+        phones: Set[str] = set()
+        if soup:
+            for a in soup.find_all("a", href=True):
+                href = a["href"].strip()
+                if href.lower().startswith("tel:"):
+                    raw_num = href[4:].strip()
+                    clean = re.sub(r"[^\d+]", "", raw_num)
+                    if len(clean) >= 7:
+                        phones.add(raw_num)
+        matches = PHONE_PATTERN.findall(html)
+        for p in matches:
+            raw = "".join(p).strip()
+            digits = re.sub(r"\D", "", raw)
+            if 7 <= len(digits) <= 15:
+                phones.add(raw)
+        return list(phones)[:10]
+
+    def _extract_decision_maker_info(self, soup: BeautifulSoup, html: str) -> Dict[str, Any]:
+        info: Dict[str, Any] = {
+            "decision_maker_name": None,
+            "decision_maker_title": None,
+            "decision_maker_phone": None,
+            "decision_maker_email": None,
+        }
+        
+        # 1. Parse Schema.org JSON-LD
+        schema_tags = soup.find_all("script", type="application/ld+json")
+        for tag in schema_tags:
+            try:
+                import json
+                data = json.loads(tag.string or "{}")
+                items = data if isinstance(data, list) else [data]
+                for item in items:
+                    if isinstance(item, dict):
+                        persons = []
+                        if item.get("@type") in ("Person", "Founder", "Owner"):
+                            persons.append(item)
+                        for key in ("founder", "owner", "employee", "member", "author"):
+                            val = item.get(key)
+                            if isinstance(val, dict) and val.get("@type") == "Person":
+                                persons.append(val)
+                            elif isinstance(val, list):
+                                for sub in val:
+                                    if isinstance(sub, dict) and sub.get("@type") == "Person":
+                                        persons.append(sub)
+                        
+                        for p in persons:
+                            title = p.get("jobTitle") or p.get("title") or "Owner / Executive"
+                            name = p.get("name")
+                            phone = p.get("telephone")
+                            email = p.get("email")
+                            if name and not info["decision_maker_name"]:
+                                info["decision_maker_name"] = name
+                                info["decision_maker_title"] = title
+                                if phone: info["decision_maker_phone"] = phone
+                                if email: info["decision_maker_email"] = email
+                                break
+            except Exception:
+                pass
+
+        # 2. Text heuristics for decision maker roles
+        if not info["decision_maker_name"]:
+            roles_pattern = re.compile(
+                r"\b(owner|founder|co-founder|ceo|president|principal|managing director|general manager|director)\b",
+                re.IGNORECASE,
+            )
+            for element in soup.find_all(["div", "section", "article", "p", "h2", "h3", "h4"]):
+                text = element.get_text(separator=" ", strip=True)
+                match = roles_pattern.search(text)
+                if match:
+                    title_found = match.group(0).title()
+                    elem_phones = self._extract_phones(str(element), BeautifulSoup(str(element), "lxml"))
+                    elem_emails = self._extract_emails(str(element))
+                    info["decision_maker_title"] = title_found
+                    if elem_phones and not info["decision_maker_phone"]:
+                        info["decision_maker_phone"] = elem_phones[0]
+                    if elem_emails and not info["decision_maker_email"]:
+                        info["decision_maker_email"] = elem_emails[0]
+                    break
+
+        return info
 
     def _detect_pixels(self, html: str) -> Dict[str, bool]:
         detected = {}
@@ -362,10 +441,13 @@ class WebsiteScraper:
             result["seo_meta"] = self._extract_seo_meta(soup, self.url)
             result["social_links"] = self._extract_social_links(soup)
             result["emails"] = self._extract_emails(html)
-            result["phones"] = self._extract_phones(html)
+            result["phones"] = self._extract_phones(html, soup)
             result["pixels"] = self._detect_pixels(html)
             result["cms_detected"] = self._detect_cms(html)
             result["booking_systems"] = self._detect_booking(html)
+            
+            # Decision Maker extraction
+            dm_info = self._extract_decision_maker_info(soup, html)
 
             # Feature detection
             result["contact_form_found"] = bool(
@@ -386,7 +468,7 @@ class WebsiteScraper:
             links = [a.get("href", "") for a in soup.find_all("a", href=True)]
             key_page_keywords = [
                 "about", "services", "contact", "blog", "privacy", "terms",
-                "booking", "appointment", "portfolio", "testimonials", "team"
+                "booking", "appointment", "portfolio", "testimonials", "team", "staff"
             ]
             crawled = 0
             for link in links:
@@ -409,10 +491,29 @@ class WebsiteScraper:
                             result["emails"] = list(set(
                                 result["emails"] + self._extract_emails(page_resp.text)
                             ))[:10]
+                            result["phones"] = list(set(
+                                result["phones"] + self._extract_phones(page_resp.text, page_soup)
+                            ))[:10]
+                            
+                            # Try Decision Maker on inner team/about page if not found yet
+                            if not dm_info.get("decision_maker_name"):
+                                inner_dm = self._extract_decision_maker_info(page_soup, page_resp.text)
+                                for k, v in inner_dm.items():
+                                    if v and not dm_info.get(k):
+                                        dm_info[k] = v
+                                        
                             crawled += 1
                     except Exception:
                         pass
 
             result["pages_found"] = self.pages_found
+            result["decision_maker_name"] = dm_info.get("decision_maker_name")
+            result["decision_maker_title"] = dm_info.get("decision_maker_title")
+            result["decision_maker_phone"] = dm_info.get("decision_maker_phone")
+            result["decision_maker_email"] = dm_info.get("decision_maker_email")
+            
+            # Set primary phone (decision maker phone if available, else first business phone)
+            primary = dm_info.get("decision_maker_phone") or (result["phones"][0] if result["phones"] else None)
+            result["primary_phone"] = primary
 
         return result

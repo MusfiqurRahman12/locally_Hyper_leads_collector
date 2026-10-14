@@ -1,13 +1,13 @@
 import type { AuditResult } from '@/types/prospect';
 import { AuditPanelShell, FindingsList } from './AuditPanelShell';
 
-export function TechStackPanel({ data, scanDone }: { data?: AuditResult; scanDone?: boolean }) {
+export function TechStackPanel({ data, scanDone, onRunScan, isScanning }: { data?: AuditResult; scanDone?: boolean; onRunScan?: () => void; isScanning?: boolean }) {
   const d = data?.data as Record<string, unknown> | undefined;
   const byCategory = d?.by_category as Record<string, string[]> | undefined;
   const technologies = d?.technologies as Array<{ name: string; category: string; version?: string }> | undefined;
 
   return (
-    <AuditPanelShell title="Technology" data={data} scanDone={scanDone}>
+    <AuditPanelShell title="Technology" data={data} scanDone={scanDone} onRunScan={onRunScan} isScanning={isScanning}>
       {d && (
         <div className="space-y-4">
           <div className="flex gap-3 flex-wrap">

@@ -2,6 +2,7 @@
 Prospects CRUD endpoints.
 """
 from fastapi import APIRouter, HTTPException, Depends, Query
+from pydantic import BaseModel, Field
 from typing import Optional, List
 from uuid import UUID
 from sqlmodel import select, func
@@ -28,7 +29,7 @@ async def list_prospects(
     has_website: Optional[bool] = None,
     min_score: Optional[int] = Query(default=None, ge=0, le=100),
     max_score: Optional[int] = Query(default=None, ge=0, le=100),
-    sort_by: str = Query(default="lead_score", regex="^(lead_score|name|city|created_at|review_count)$"),
+    sort_by: str = Query(default="created_at", regex="^(lead_score|name|city|created_at|review_count)$"),
     sort_dir: str = Query(default="desc", regex="^(asc|desc)$"),
     session: AsyncSession = Depends(get_session),
 ):
@@ -37,9 +38,13 @@ async def list_prospects(
 
     # Filters
     if search:
+        term = f"%{search}%"
         query = query.where(
-            (Prospect.name.ilike(f"%{search}%")) |
-            (Prospect.address.ilike(f"%{search}%"))
+            (Prospect.name.ilike(term)) |
+            (Prospect.address.ilike(term)) |
+            (Prospect.city.ilike(term)) |
+            (Prospect.state.ilike(term)) |
+            (Prospect.category.ilike(term))
         )
     if category:
         query = query.where(Prospect.category.ilike(f"%{category}%"))
@@ -65,11 +70,11 @@ async def list_prospects(
     total = total_result.one()
 
     # Sort
-    sort_col = getattr(Prospect, sort_by, Prospect.lead_score)
+    sort_col = getattr(Prospect, sort_by, Prospect.created_at)
     if sort_dir == "desc":
-        query = query.order_by(sort_col.desc().nullslast())
+        query = query.order_by(sort_col.desc().nullslast(), Prospect.created_at.desc())
     else:
-        query = query.order_by(sort_col.asc().nullsfirst())
+        query = query.order_by(sort_col.asc().nullsfirst(), Prospect.created_at.desc())
 
     # Paginate
     offset = (page - 1) * page_size
@@ -92,6 +97,7 @@ async def list_prospects(
                 "city": p.city,
                 "state": p.state,
                 "phone": p.phone,
+                "email": p.email,
                 "website": p.website,
                 "google_rating": p.google_rating,
                 "review_count": p.review_count,
@@ -100,6 +106,8 @@ async def list_prospects(
                 "business_status": p.business_status,
                 "lat": p.lat,
                 "lng": p.lng,
+                "owner_name": p.owner_name,
+                "contact_details": p.contact_details,
                 "data_source": p.data_source,
                 "last_scan_date": p.last_scan_date.isoformat() if p.last_scan_date else None,
             }
@@ -215,3 +223,166 @@ async def delete_prospect(prospect_id: UUID, session: AsyncSession = Depends(get
         raise HTTPException(status_code=404, detail="Prospect not found")
     await session.delete(prospect)
     await session.commit()
+
+
+# ─── Batch Ingestion Models & Endpoints (Google Maps Extension Sync) ────────────
+
+class ProspectBatchItem(BaseModel):
+    name: str
+    phone: Optional[str] = None
+    website: Optional[str] = None
+    address: Optional[str] = None
+    city: Optional[str] = None
+    state: Optional[str] = None
+    country: Optional[str] = "United States"
+    postal_code: Optional[str] = None
+    category: Optional[str] = None
+    google_rating: Optional[float] = None
+    review_count: Optional[int] = None
+    business_status: Optional[str] = "OPERATIONAL"
+    data_source: Optional[str] = "gmaps_extension"
+    description: Optional[str] = None
+    maps_url: Optional[str] = None
+    demo_url: Optional[str] = None
+
+
+class ProspectBatchRequest(BaseModel):
+    prospects: List[ProspectBatchItem]
+    auto_audit: bool = True
+
+
+class ProspectBatchResponse(BaseModel):
+    total_received: int
+    prospects_created: int
+    prospects_existing: int
+    scans_triggered: int
+
+
+@router.post("/prospects/batch", response_model=ProspectBatchResponse)
+async def import_prospects_batch(
+    request: ProspectBatchRequest,
+    session: AsyncSession = Depends(get_session),
+):
+    """
+    Ingest a batch of scraped prospects (e.g. from Google Maps Extension).
+    Deduplicates by phone, website, or name+city, updates existing records,
+    and optionally dispatches background audit scans.
+    """
+    if not request.prospects:
+        return ProspectBatchResponse(
+            total_received=0,
+            prospects_created=0,
+            prospects_existing=0,
+            scans_triggered=0,
+        )
+
+    created_count = 0
+    existing_count = 0
+    scans_triggered = 0
+    new_prospect_ids = []
+
+    for item in request.prospects:
+        name = item.name.strip()
+        phone = item.phone.strip() if item.phone else None
+        website = item.website.strip() if item.website else None
+        if website and not website.startswith("http"):
+            website = f"https://{website}"
+
+        # ── Deduplication Checks ──
+        existing_prospect = None
+        if phone:
+            clean_digits = "".join(filter(str.isdigit, phone))
+            if len(clean_digits) >= 10:
+                last_10 = clean_digits[-10:]
+                stmt = select(Prospect).where(Prospect.phone.ilike(f"%{last_10}%"))
+                res = await session.exec(stmt)
+                existing_prospect = res.first()
+
+        if not existing_prospect and website:
+            stmt = select(Prospect).where(Prospect.website == website)
+            res = await session.exec(stmt)
+            existing_prospect = res.first()
+
+        if not existing_prospect and item.city:
+            stmt = select(Prospect).where(
+                Prospect.name.ilike(name),
+                Prospect.city.ilike(item.city.strip()),
+            )
+            res = await session.exec(stmt)
+            existing_prospect = res.first()
+
+        if existing_prospect:
+            existing_count += 1
+            updated = False
+            if not existing_prospect.phone and phone:
+                existing_prospect.phone = phone
+                updated = True
+            if not existing_prospect.website and website:
+                existing_prospect.website = website
+                updated = True
+            if not existing_prospect.address and item.address:
+                existing_prospect.address = item.address
+                updated = True
+            if item.google_rating is not None and existing_prospect.google_rating is None:
+                existing_prospect.google_rating = item.google_rating
+                updated = True
+            if item.review_count is not None and existing_prospect.review_count is None:
+                existing_prospect.review_count = item.review_count
+                updated = True
+            if updated:
+                session.add(existing_prospect)
+        else:
+            prospect = Prospect(
+                name=name,
+                phone=phone,
+                website=website,
+                address=item.address,
+                city=item.city,
+                state=item.state,
+                country=item.country,
+                postal_code=item.postal_code,
+                category=item.category,
+                google_rating=item.google_rating,
+                review_count=item.review_count,
+                business_status=item.business_status or "OPERATIONAL",
+                data_source=item.data_source or "gmaps_extension",
+                description=item.description,
+                maps_url=item.maps_url,
+                social_links={"demo_url": item.demo_url} if item.demo_url else None,
+            )
+            session.add(prospect)
+            created_count += 1
+            await session.flush()
+            new_prospect_ids.append(prospect.id)
+
+    await session.commit()
+
+    # ── Trigger background audit scans for new prospects with websites ──
+    if request.auto_audit and new_prospect_ids:
+        try:
+            from app.workers.scan_task import run_scan_task
+            for pid in new_prospect_ids:
+                p = await session.get(Prospect, pid)
+                if p and p.website:
+                    try:
+                        scan = Scan(prospect_id=pid)
+                        session.add(scan)
+                        await session.commit()
+                        await session.refresh(scan)
+
+                        task = run_scan_task.delay(str(scan.id), str(pid))
+                        scan.task_id = task.id
+                        session.add(scan)
+                        await session.commit()
+                        scans_triggered += 1
+                    except Exception:
+                        pass
+        except ImportError:
+            pass
+
+    return ProspectBatchResponse(
+        total_received=len(request.prospects),
+        prospects_created=created_count,
+        prospects_existing=existing_count,
+        scans_triggered=scans_triggered,
+    )

@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>J-Tech Lead Scraper</title>
+  <style>
+    /* ─── Design Tokens ──────────────────────────────────────────────────────── */
+    :root {
+      --bg-primary: #0f1117;
+      --bg-card: #1a1d27;
+      --bg-card-hover: #22263a;
+      --bg-input: #141722;
+      --border: #2a2e3d;
+      --border-focus: #6366f1;
+      --text-primary: #e8eaf0;
+      --text-secondary: #8b8fa3;
+      --text-muted: #5e6274;
+      --accent: #6366f1;
+      --accent-light: #818cf8;
+      --green: #22c55e;
+      --green-bg: rgba(34, 197, 94, 0.12);
+      --amber: #f59e0b;
+      --amber-bg: rgba(245, 158, 11, 0.12);
+      --red: #ef4444;
+      --red-bg: rgba(239, 68, 68, 0.12);
+      --blue: #3b82f6;
+      --blue-bg: rgba(59, 130, 246, 0.12);
+      --radius: 10px;
+      --radius-sm: 6px;
+      --shadow: 0 4px 24px rgba(0, 0, 0, 0.35);
+      --transition: 200ms cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    /* ─── Reset & Base ───────────────────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      width: 440px;
+      min-height: 560px;
+      font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      font-size: 13px;
+      line-height: 1.5;
+      overflow-y: auto;
+    }
+
+    /* ─── Header ─────────────────────────────────────────────────────────────── */
+    .header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--border);
+      background: linear-gradient(135deg, #161927 0%, #1a1d2e 100%);
+    }
+    .header-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: var(--radius);
+      background: linear-gradient(135deg, var(--accent), #a855f7);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      flex-shrink: 0;
+    }
+    .header-text h1 {
+      font-size: 15px;
+      font-weight: 700;
+      letter-spacing: -0.3px;
+      background: linear-gradient(90deg, var(--text-primary), var(--accent-light));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .header-text p {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 1px;
+    }
+
+    /* ─── Status Badge ───────────────────────────────────────────────────────── */
+    .status-bar {
+      padding: 8px 18px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      border-bottom: 1px solid var(--border);
+    }
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--text-muted);
+      flex-shrink: 0;
+    }
+    .status-dot.idle { background: var(--text-muted); }
+    .status-dot.scraping { background: var(--green); animation: pulse 1.4s infinite; }
+    .status-dot.paused { background: var(--amber); }
+    .status-dot.panning { background: var(--accent-light); animation: pulse 0.8s infinite; }
+    .status-dot.complete { background: var(--blue); }
+    .status-dot.error { background: var(--red); }
+    .status-label {
+      font-size: 12px;
+      color: var(--text-secondary);
+      flex: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(1.3); }
+    }
+
+    /* ─── Notice / Info Banner ────────────────────────────────────────────────── */
+    .notice-banner {
+      margin: 0 18px 10px;
+      padding: 8px 12px;
+      border-radius: var(--radius-sm);
+      background: rgba(99, 102, 241, 0.1);
+      border: 1px solid rgba(99, 102, 241, 0.25);
+      font-size: 11px;
+      color: #c7d2fe;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    /* ─── Stats Grid ─────────────────────────────────────────────────────────── */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 8px;
+      padding: 12px 18px;
+    }
+    .stat-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 10px 12px;
+      text-align: center;
+      transition: border-color var(--transition);
+    }
+    .stat-card:hover { border-color: var(--accent); }
+    .stat-value {
+      font-size: 22px;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+    }
+    .stat-value.green { color: var(--green); }
+    .stat-value.amber { color: var(--amber); }
+    .stat-value.muted { color: var(--text-muted); }
+    .stat-label {
+      font-size: 10px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-top: 2px;
+    }
+
+    /* ─── Settings Panel ─────────────────────────────────────────────────────── */
+    .settings-panel {
+      padding: 10px 18px 14px;
+      border-bottom: 1px solid var(--border);
+    }
+    .settings-toggle {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      cursor: pointer;
+      user-select: none;
+      padding: 4px 0;
+    }
+    .settings-toggle span {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+    }
+    .settings-toggle .chevron {
+      font-size: 14px;
+      color: var(--text-muted);
+      transition: transform var(--transition);
+    }
+    .settings-toggle.open .chevron { transform: rotate(180deg); }
+    .settings-body {
+      display: none;
+      padding-top: 12px;
+    }
+    .settings-body.open { display: block; }
+    
+    .settings-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .field.full { grid-column: 1 / -1; }
+    .field label {
+      font-size: 10px;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .field input, .select-input {
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 7px 10px;
+      font-size: 12px;
+      color: var(--text-primary);
+      outline: none;
+      transition: border-color var(--transition);
+      font-family: inherit;
+    }
+    .field input:focus, .select-input:focus { border-color: var(--border-focus); }
+
+    /* Segmented Control for Website Filter */
+    .segmented-control {
+      display: flex;
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 2px;
+      gap: 2px;
+    }
+    .segment-btn {
+      flex: 1;
+      padding: 6px 6px;
+      background: transparent;
+      border: none;
+      border-radius: 4px;
+      color: var(--text-secondary);
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: inherit;
+      transition: all var(--transition);
+      text-align: center;
+      white-space: nowrap;
+    }
+    .segment-btn:hover {
+      color: var(--text-primary);
+      background: rgba(255, 255, 255, 0.05);
+    }
+    .segment-btn.active {
+      background: var(--accent);
+      color: #fff;
+      box-shadow: 0 2px 8px rgba(99, 102, 241, 0.35);
+    }
+
+    /* Toggle row */
+    .checkbox-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 4px 2px;
+      cursor: pointer;
+    }
+    .checkbox-row span {
+      font-size: 11px;
+      color: var(--text-secondary);
+      font-weight: 500;
+    }
+    .checkbox-row input {
+      width: 16px;
+      height: 16px;
+      cursor: pointer;
+      accent-color: var(--accent);
+    }
+
+    /* Neighborhood Queue Preview */
+    .queue-badge {
+      background: rgba(99, 102, 241, 0.08);
+      border: 1px dashed rgba(99, 102, 241, 0.3);
+      border-radius: var(--radius-sm);
+      padding: 7px 10px;
+      font-size: 11px;
+      color: var(--text-secondary);
+      line-height: 1.4;
+    }
+    .queue-badge strong { color: var(--accent-light); }
+    .custom-cities-box {
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 7px 10px;
+      font-size: 11px;
+      color: var(--text-primary);
+      outline: none;
+      width: 100%;
+      height: 55px;
+      resize: vertical;
+      font-family: inherit;
+      margin-top: 4px;
+    }
+    .custom-cities-box:focus { border-color: var(--border-focus); }
+
+    /* ─── Controls ───────────────────────────────────────────────────────────── */
+    .controls {
+      display: flex;
+      gap: 8px;
+      padding: 12px 18px;
+    }
+    .btn {
+      flex: 1;
+      padding: 9px 14px;
+      border: none;
+      border-radius: var(--radius-sm);
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: inherit;
+      transition: all var(--transition);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      letter-spacing: 0.2px;
+    }
+    .btn:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, var(--accent), #a855f7);
+      color: #fff;
+    }
+    .btn-primary:hover:not(:disabled) {
+      filter: brightness(1.12);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 16px rgba(99, 102, 241, 0.35);
+    }
+    .btn-secondary {
+      background: var(--bg-card);
+      color: var(--text-secondary);
+      border: 1px solid var(--border);
+    }
+    .btn-secondary:hover:not(:disabled) {
+      border-color: var(--accent);
+      color: var(--text-primary);
+    }
+    .btn-success {
+      background: var(--green);
+      color: #fff;
+    }
+    .btn-success:hover:not(:disabled) {
+      filter: brightness(1.1);
+      transform: translateY(-1px);
+    }
+    .btn-danger {
+      background: var(--red-bg);
+      color: var(--red);
+      border: 1px solid rgba(239, 68, 68, 0.25);
+    }
+    .btn-danger:hover:not(:disabled) {
+      background: rgba(239, 68, 68, 0.2);
+    }
+
+    /* ─── Preview Table ──────────────────────────────────────────────────────── */
+    .preview-section {
+      padding: 10px 18px 16px;
+    }
+    .preview-header {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      margin-bottom: 8px;
+    }
+    .preview-empty {
+      text-align: center;
+      padding: 20px;
+      color: var(--text-muted);
+      font-size: 12px;
+      background: var(--bg-card);
+      border-radius: var(--radius);
+      border: 1px dashed var(--border);
+    }
+    .lead-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 10px 12px;
+      margin-bottom: 6px;
+      transition: border-color var(--transition);
+    }
+    .lead-card:hover { border-color: var(--accent); }
+    .lead-card .lead-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: 4px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .lead-meta {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      font-size: 11px;
+    }
+    .lead-tag {
+      padding: 2px 7px;
+      border-radius: 4px;
+      font-size: 10px;
+      font-weight: 600;
+    }
+    .tag-green { background: var(--green-bg); color: var(--green); }
+    .tag-amber { background: var(--amber-bg); color: var(--amber); }
+    .tag-red { background: var(--red-bg); color: var(--red); }
+    .tag-blue { background: var(--blue-bg); color: var(--blue); }
+
+    /* ─── Scrollbar ──────────────────────────────────────────────────────────── */
+    ::-webkit-scrollbar { width: 5px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+
+    /* ─── Utility ────────────────────────────────────────────────────────────── */
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body>
+
+  <!-- Header -->
+  <div class="header">
+    <div class="header-icon">⚡</div>
+    <div class="header-text">
+      <h1>J-Tech Lead Scraper</h1>
+      <p>State-Wide Neighborhood & Lead Discovery</p>
+    </div>
+  </div>
+
+  <!-- Status Bar -->
+  <div class="status-bar">
+    <div class="status-dot idle" id="statusDot"></div>
+    <span class="status-label" id="statusLabel">Idle — Ready to scrape</span>
+  </div>
+
+  <!-- Notice Banner for auto-pan / multi-zone status -->
+  <div class="notice-banner hidden" id="noticeBanner">
+    <span id="noticeText"></span>
+  </div>
+
+  <!-- Stats Grid -->
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-value green" id="qualifiedCount">0</div>
+      <div class="stat-label">Qualified</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value muted" id="rejectedCount">0</div>
+      <div class="stat-label">Rejected</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value amber" id="totalCount">0</div>
+      <div class="stat-label">Scanned</div>
+    </div>
+  </div>
+
+  <!-- Settings -->
+  <div class="settings-panel">
+    <div class="settings-toggle" id="settingsToggle">
+      <span>⚙ Filter Settings & Neighborhood Queue</span>
+      <span class="chevron">▾</span>
+    </div>
+    <div class="settings-body" id="settingsBody">
+      
+      <!-- Website Filter Toggle Button Group -->
+      <div class="field full" style="margin-bottom: 10px;">
+        <label>Website Filter</label>
+        <div class="segmented-control" id="websiteFilterGroup">
+          <button type="button" class="segment-btn active" data-filter="all">All</button>
+          <button type="button" class="segment-btn" data-filter="missing">🚫 Missing Website</button>
+          <button type="button" class="segment-btn" data-filter="has_website">🌐 Has Website</button>
+        </div>
+      </div>
+
+      <!-- State-Wide Neighborhood Queue Section -->
+      <div class="field full" style="margin-bottom: 8px; border-top: 1px solid var(--border); padding-top: 8px;">
+        <label class="checkbox-row">
+          <span style="font-weight: 700; color: var(--text-primary);">🔄 Auto-Hop Through Neighborhoods</span>
+          <input type="checkbox" id="autoHopCities" checked />
+        </label>
+      </div>
+
+      <div id="cityHopSettings" style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px;">
+        <div class="settings-row">
+          <div class="field">
+            <label>State</label>
+            <select id="stateSelect" class="select-input">
+              <option value="AL" selected>Alabama (30 Cities)</option>
+              <option value="FL">Florida</option>
+              <option value="GA">Georgia</option>
+              <option value="TN">Tennessee</option>
+              <option value="TX">Texas</option>
+              <option value="NC">North Carolina</option>
+              <option value="CA">California</option>
+              <option value="NY">New York</option>
+              <option value="CUSTOM">Custom Cities…</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Trade Keyword</label>
+            <input type="text" id="tradeKeyword" value="Electrician" placeholder="e.g. Electrician, Plumber" />
+          </div>
+        </div>
+
+        <div class="field full">
+          <div class="queue-badge" id="queueSummary">
+            <span>📍 <strong>Queued:</strong> Birmingham, Huntsville, Mobile, Montgomery, Tuscaloosa, Hoover + 24 more</span>
+          </div>
+          <textarea id="customCitiesInput" class="custom-cities-box hidden" placeholder="Enter cities separated by comma (e.g. Birmingham, Hoover, Vestavia Hills, Pelham)"></textarea>
+        </div>
+      </div>
+
+      <div class="settings-row" style="border-top: 1px solid var(--border); padding-top: 8px;">
+        <div class="field">
+          <label>Target Leads</label>
+          <input type="number" id="targetLeads" value="200" min="1" />
+        </div>
+        <div class="field">
+          <label>Min Rating</label>
+          <input type="number" id="minRating" value="3.5" min="0" max="5" step="0.1" />
+        </div>
+      </div>
+
+      <div class="settings-row">
+        <div class="field">
+          <label>Min Reviews</label>
+          <input type="number" id="minReviews" value="8" min="0" />
+        </div>
+        <div class="field">
+          <label>Max Reviews</label>
+          <input type="number" id="maxReviews" value="65" min="0" />
+        </div>
+      </div>
+
+      <div class="settings-row">
+        <div class="field">
+          <label>Max Rating</label>
+          <input type="number" id="maxRating" value="5.0" min="0" max="5" step="0.1" />
+        </div>
+      </div>
+
+      <!-- Demo Pitch Link Toggle (Optional for Phase 2) -->
+      <div class="field full" style="margin-top: 4px;">
+        <label class="checkbox-row">
+          <span>Generate Demo Pitch Link (Optional)</span>
+          <input type="checkbox" id="generateDemoLink" />
+        </label>
+      </div>
+
+      <div class="field full hidden" id="demoUrlRow" style="margin-top: 4px;">
+        <label>Demo Agency Base URL</label>
+        <input type="url" id="demoBaseUrl" value="https://demo.jtechagency.com/" />
+      </div>
+
+      <!-- Deep Detail Peek Toggle -->
+      <div class="field full" style="margin-top: 4px;">
+        <label class="checkbox-row">
+          <span>Deep Card Peek (Rescues hidden phone numbers)</span>
+          <input type="checkbox" id="deepCardPeek" checked />
+        </label>
+      </div>
+
+      <!-- Local Finder Sync Endpoint -->
+      <div class="field full" style="margin-top: 6px;">
+        <label>Local Prospect Finder API</label>
+        <input type="url" id="syncApiUrl" value="http://localhost:8005/api/v1/prospects/batch" />
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Controls -->
+  <div class="controls" id="controlsIdle">
+    <button class="btn btn-primary" id="btnStart">⚡ Start Scraping</button>
+  </div>
+  <div class="controls hidden" id="controlsRunning">
+    <button class="btn btn-secondary" id="btnPause">⏸ Pause</button>
+    <button class="btn btn-danger" id="btnStop">■ Stop</button>
+  </div>
+  <div class="controls hidden" id="controlsDone">
+    <button class="btn btn-primary" id="btnSyncLocal" style="background: linear-gradient(135deg, #10b981, #059669); color: #fff;" title="Sync qualified leads to Local Prospect Finder for email discovery and full audit">🚀 Sync to Local Finder</button>
+    <button class="btn btn-success" id="btnExport">⬇ Export CSV</button>
+    <button class="btn btn-secondary" id="btnContinue" title="Search next area without clearing existing leads">▶ Continue Search</button>
+    <button class="btn btn-secondary" id="btnRestart" title="Clear all leads and start completely fresh">↻ New Scan</button>
+  </div>
+
+  <!-- Preview -->
+  <div class="preview-section">
+    <div class="preview-header">Recent Qualified Leads</div>
+    <div id="previewContainer">
+      <div class="preview-empty">No leads yet — start scraping on a Google Maps search page</div>
+    </div>
+  </div>
+
+  <script src="rules.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>

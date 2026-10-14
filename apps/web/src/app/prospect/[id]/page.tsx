@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
-  ArrowLeft, Globe, Phone, Mail, MapPin, Star, ScanLine,
+  ArrowLeft, Globe, Phone, Mail, MapPin, Star, ScanLine, User,
   ExternalLink, Clock, Shield, Zap, Search, Layers, Target,
   CheckCircle, AlertTriangle, XCircle, ChevronRight, Loader2
 } from 'lucide-react';
@@ -58,6 +58,10 @@ export default function ProspectDetailPage() {
   const { mutate: startScan, isPending: isStartingScan } = useMutation({
     mutationFn: () => triggerScan(id),
     onSuccess: () => {
+      setScanPollInterval(2000);
+      refetch();
+    },
+    onError: () => {
       setScanPollInterval(2000);
       refetch();
     },
@@ -156,8 +160,33 @@ export default function ProspectDetailPage() {
             <div className="glass rounded-xl p-5">
               <h3 className="text-sm font-semibold text-white mb-4">Contact Information</h3>
               <div className="space-y-3">
+                {prospect.owner_name && (
+                  <div className="p-3 rounded-lg bg-indigo-500/10 border border-indigo-500/20 mb-3">
+                    <div className="flex items-center gap-1.5 text-xs font-semibold text-indigo-400">
+                      <User size={13} /> Decision Maker
+                    </div>
+                    <div className="text-sm font-medium text-white mt-1">
+                      {prospect.owner_name} {prospect.contact_details?.decision_maker_title ? `(${prospect.contact_details.decision_maker_title})` : ''}
+                    </div>
+                    {prospect.contact_details?.decision_maker_phone && (
+                      <a href={`tel:${prospect.contact_details.decision_maker_phone}`} className="text-xs text-indigo-300 hover:underline flex items-center gap-1 mt-1.5">
+                        <Phone size={12} /> Direct: {prospect.contact_details.decision_maker_phone}
+                      </a>
+                    )}
+                    {prospect.contact_details?.decision_maker_email && (
+                      <a href={`mailto:${prospect.contact_details.decision_maker_email}`} className="text-xs text-indigo-300 hover:underline flex items-center gap-1 mt-1">
+                        <Mail size={12} /> {prospect.contact_details.decision_maker_email}
+                      </a>
+                    )}
+                  </div>
+                )}
                 {prospect.phone && (
-                  <InfoRow icon={<Phone size={14} />} label="Phone" value={prospect.phone} href={`tel:${prospect.phone}`} />
+                  <InfoRow
+                    icon={<Phone size={14} />}
+                    label={prospect.contact_details?.phone_type === 'decision_maker' ? 'Direct Phone' : 'Business Phone'}
+                    value={prospect.phone}
+                    href={`tel:${prospect.phone}`}
+                  />
                 )}
                 {prospect.email && (
                   <InfoRow icon={<Mail size={14} />} label="Email" value={prospect.email} href={`mailto:${prospect.email}`} />
@@ -168,7 +197,7 @@ export default function ProspectDetailPage() {
                 {prospect.maps_url && (
                   <InfoRow icon={<MapPin size={14} />} label="Maps" value="View on OpenStreetMap" href={prospect.maps_url} external />
                 )}
-                {!prospect.phone && !prospect.email && !prospect.website && (
+                {!prospect.phone && !prospect.email && !prospect.website && !prospect.owner_name && (
                   <p className="text-xs text-gray-500">No contact info found</p>
                 )}
               </div>
@@ -223,13 +252,13 @@ export default function ProspectDetailPage() {
           </div>
         )}
 
-        {activeTab === 'pain_points' && <PainPointsPanel painPoints={prospect.pain_points || []} scanDone={scan?.status === 'DONE'} />}
-        {activeTab === 'services' && <ServicesPanel services={prospect.recommended_services || []} scanDone={scan?.status === 'DONE'} />}
-        {activeTab === 'seo' && <SEOPanel data={prospect.audit_results?.SEO} scanDone={scan?.status === 'DONE'} />}
-        {activeTab === 'performance' && <PerformancePanel data={prospect.audit_results?.PERFORMANCE} scanDone={scan?.status === 'DONE'} />}
-        {activeTab === 'security' && <SecurityPanel data={prospect.audit_results?.SECURITY} scanDone={scan?.status === 'DONE'} />}
-        {activeTab === 'technology' && <TechStackPanel data={prospect.audit_results?.TECHNOLOGY} scanDone={scan?.status === 'DONE'} />}
-        {activeTab === 'marketing' && <MarketingPanel data={prospect.audit_results?.MARKETING} scanDone={scan?.status === 'DONE'} />}
+        {activeTab === 'pain_points' && <PainPointsPanel painPoints={prospect.pain_points || []} scanDone={scan?.status === 'DONE'} onRunScan={() => startScan()} isScanning={isScanRunning} />}
+        {activeTab === 'services' && <ServicesPanel services={prospect.recommended_services || []} scanDone={scan?.status === 'DONE'} onRunScan={() => startScan()} isScanning={isScanRunning} />}
+        {activeTab === 'seo' && <SEOPanel data={prospect.audit_results?.SEO} scanDone={scan?.status === 'DONE'} onRunScan={() => startScan()} isScanning={isScanRunning} />}
+        {activeTab === 'performance' && <PerformancePanel data={prospect.audit_results?.PERFORMANCE} scanDone={scan?.status === 'DONE'} onRunScan={() => startScan()} isScanning={isScanRunning} />}
+        {activeTab === 'security' && <SecurityPanel data={prospect.audit_results?.SECURITY} scanDone={scan?.status === 'DONE'} onRunScan={() => startScan()} isScanning={isScanRunning} />}
+        {activeTab === 'technology' && <TechStackPanel data={prospect.audit_results?.TECHNOLOGY} scanDone={scan?.status === 'DONE'} onRunScan={() => startScan()} isScanning={isScanRunning} />}
+        {activeTab === 'marketing' && <MarketingPanel data={prospect.audit_results?.MARKETING} scanDone={scan?.status === 'DONE'} onRunScan={() => startScan()} isScanning={isScanRunning} />}
       </div>
     </div>
   );
